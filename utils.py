@@ -47,10 +47,7 @@ def convert_czi_to_tiff(filename: str):
     os.remove(stacked_filename)
 
 
-def split_image(
-    filename: str,
-    n_chunks: int,
-):
+def split_image(filename: str, n_chunks: int):
     """
     Split an image into `n` chunks and save them in a directory with a
     sufix "_ij" corresponding to the ij-th chunk.
