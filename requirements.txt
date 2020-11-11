@@ -1,7 +1,5 @@
 czifile==2019.7.2
 numpy==1.19.2
-pkg-resources==0.0.0
-python-dateutil==2.8.1
-pytz==2020.1
 six==1.15.0
+sympy==1.6.2
 tifffile==2020.10.1
