@@ -1,5 +1,4 @@
 import os
-import cv2
 import czifile
 import tifffile
 import numpy as np
@@ -10,7 +9,7 @@ def load_czi_image(filename: str) -> np.array:
     """Load the czi image, and remove useless dimensions if needed.
 
     :param filename: path to the file to load.
-    :return: image array.
+    :return: the image array.
     """
     image = czifile.imread(filename)
     return np.squeeze(image)
@@ -18,10 +17,11 @@ def load_czi_image(filename: str) -> np.array:
 
 def convert_czi_to_tiff(filename: str) -> str:
     """
-   Convert a `.czi` file into a `.tiff` file.
+   Convert a `.czi` file into a `.tiff` file and return the filename.
    File is saved in the same directory as the `.czi`.
+
    :param filename: path to the file to load.
-   :return the .tiff filename
+   :return the `.tiff` filename.
    """
     tiff_filename = os.path.splitext(filename)[0] + ".tiff"
     if not os.path.exists(tiff_filename):
@@ -37,6 +37,7 @@ def convert_czi_to_three_grayscale_tiff(filename: str) -> None:
    Files are saved in the same directory as the `.czi` with a suffix "_r", "_g"
    or "_b" according to their channel (RGB).
    It is assumed that the .czi file is of shape (3, x, y) and NOT (3,3,x,y).
+
    :param filename: path to the file to load.
    """
     # Convert .czi to .tiff
@@ -58,23 +59,24 @@ def convert_czi_to_three_grayscale_tiff(filename: str) -> None:
     for k, channel_array in enumerate(tiff_array):
         channel_filename = "".join([no_extension_filename, suffix[k], ".tiff"])
         if not os.path.exists(channel_filename):
-            cv2.imwrite(channel_filename, channel_array)
+            tifffile.imwrite(channel_filename, channel_array)
             print(f"Created a .tiff file for {filename} on channel {'BGR'[k]}")
         else:
             print(f"A .tiff file for {filename} on channel {'BGR'[k]} already exists in this directory.")
 
 
-def load_tiff_image(filename: str, opencv: bool = True) -> np.array:
+def load_tiff_image(filename: str) -> np.array:
     """
-    Load a .tiff file and return it as a numpy array
+    Load a `.tiff` file and return it as a numpy array.
+    Using the 'tifffile' module instead of opencv for 2 reasons :
+      - OpenCV can't open file ≥ 1 Gb
+      - OpenCV appears to apply some sort of threshold [x ≥ 255] and
+      loads the image in a array containing only 0s and 1s.
+
     :param filename: path to the file to load.
-    :param opencv: if True, load using opencv, otherwise use tifffile
-    :return: the image as a numpy array
+    :return: the image as a numpy array.
     """
-    if opencv:
-        return cv2.imread(filename, 0)
-    else:
-        return tifffile.imread(filename)
+    return tifffile.imread(filename)
 
 
 def split_image(filename: str, n_chunks: int) -> str:
@@ -84,6 +86,7 @@ def split_image(filename: str, n_chunks: int) -> str:
 
     :param filename: path to the file to load.
     :param n_chunks: number (not prime) of chunks to split the initial image.
+    :return : the directory in which the files were saved.
     """
     # Load the large image to chunk
     large_image = tifffile.imread(filename)
@@ -107,7 +110,7 @@ def split_image(filename: str, n_chunks: int) -> str:
 
     # Create a directory to save chunks
     saving_directory, _ = os.path.splitext(filename)
-    saving_directory += f"_{n_chunks}parts"
+    saving_directory = saving_directory + f"_{n_chunks}parts"
     if not os.path.exists(saving_directory):
         os.makedirs(saving_directory)
     # Get the chunk filename to save without suffix and extension
@@ -136,3 +139,4 @@ def split_image(filename: str, n_chunks: int) -> str:
             tifffile.imwrite(chunk_filename, chunk)
 
     print(f"All chunks saved in {saving_directory}")
+    return saving_directory
