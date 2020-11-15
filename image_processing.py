@@ -1,4 +1,5 @@
 import os
+
 import czifile
 import tifffile
 import numpy as np
@@ -45,9 +46,14 @@ def convert_czi_to_three_grayscale_tiff(filename: str) -> None:
     tiff_array = tifffile.imread(tiff_filename)
 
     # Check the generated image
+
+    # Because the array is already squeezed, the image should have 3 dimensions only :
+    # (channels, height, width). Otherwise we don't know how to convert it to grayscale.
     n_dimensions = len(tiff_array.shape)
-    n_channels = tiff_array.shape[0]
     assert n_dimensions == 3, f"File {filename} has {n_dimensions} dimensions, expected 3"
+
+    # The image is supposed to be RGB (without alpha channel) or grayscale (intensity)
+    n_channels = tiff_array.shape[0]
     assert n_channels in (1, 3), f"File {filename} has {n_channels} channels, expected 1 or 3"
     if n_channels == 1:
         print(f"File {filename} has only one channel, {tiff_filename} is its grayscale .tiff version")
