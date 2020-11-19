@@ -18,12 +18,12 @@ def load_czi_image(filename: str) -> np.array:
 
 def convert_czi_to_tiff(filename: str) -> str:
     """
-   Convert a `.czi` file into a `.tiff` file and return the filename.
-   File is saved in the same directory as the `.czi`.
+    Convert a `.czi` file into a `.tiff` file and return the filename.
+    File is saved in the same directory as the `.czi`.
 
-   :param filename: path to the file to load.
-   :return the `.tiff` filename.
-   """
+    :param filename: path to the file to load.
+    :return the `.tiff` filename.
+    """
     tiff_filename = os.path.splitext(filename)[0] + ".tiff"
     if not os.path.exists(tiff_filename):
         czifile.czi2tif(filename, tiff_filename)
@@ -34,30 +34,37 @@ def convert_czi_to_tiff(filename: str) -> str:
 
 def convert_czi_to_three_grayscale_tiff(filename: str) -> None:
     """
-   Convert a `.czi` file into 3 `.tiff` grayscale files corresponding to each channel.
-   Files are saved in the same directory as the `.czi` with a suffix "_r", "_g"
-   or "_b" according to their channel (RGB).
-   It is assumed that the .czi file is of shape (3, x, y) and NOT (3,3,x,y).
+    Convert a `.czi` file into 3 `.tiff` grayscale files corresponding to each
+    channel. Files are saved in the same directory as the `.czi` with a suffix
+    "_r", "_g" or "_b" according to their channel (RGB).
+    It is assumed that the .czi file is of shape (3, x, y) and NOT (3,3,x,y).
 
-   :param filename: path to the file to load.
-   """
+    :param filename: path to the file to load.
+    """
     # Convert .czi to .tiff
     tiff_filename = convert_czi_to_tiff(filename)
     tiff_array = tifffile.imread(tiff_filename)
 
     # Check the generated image
 
-    # Because the array is already squeezed, the image should have 3 dimensions only :
-    # (channels, height, width). Otherwise we don't know how to convert it to grayscale.
+    # Because the array is already squeezed, the image should have 3 dimensions
+    # only : (channels, height, width). Otherwise we don't know how to convert
+    # it to grayscale.
     n_dimensions = len(tiff_array.shape)
-    assert n_dimensions == 3, f"File {filename} has {n_dimensions} dimensions, expected 3"
-
-    # The image is supposed to be RGB (without alpha channel) or grayscale (intensity)
+    if not n_dimensions == 3:
+        print(f"File {filename} has {n_dimensions} dimensions, expected 3")
+        raise
+    # The image is supposed to be RGB (no alpha channel) or grayscale (intensity)
     n_channels = tiff_array.shape[0]
-    assert n_channels in (1, 3), f"File {filename} has {n_channels} channels, expected 1 or 3"
+    if n_channels not in [1, 3]:
+        print(f"File {filename} has {n_channels} channels, expected 1 or 3")
+        raise
     if n_channels == 1:
-        print(f"File {filename} has only one channel, {tiff_filename} is its grayscale .tiff version")
-        return
+        print(
+            f"File {filename} has only one channel, {tiff_filename} "
+            "is its grayscale `.tiff` version"
+        )
+        raise
 
     # Save an image for each channel
     no_extension_filename, _ = os.path.splitext(filename)
@@ -68,7 +75,10 @@ def convert_czi_to_three_grayscale_tiff(filename: str) -> None:
             tifffile.imwrite(channel_filename, channel_array)
             print(f"Created a .tiff file for {filename} on channel {'BGR'[k]}")
         else:
-            print(f"A .tiff file for {filename} on channel {'BGR'[k]} already exists in this directory.")
+            print(
+                f"A .tiff file for {filename} on channel {'BGR'[k]} already"
+                " exists in this directory."
+            )
 
 
 def load_tiff_image(filename: str) -> np.array:
@@ -101,7 +111,7 @@ def split_image(filename: str, n_chunks: int) -> str:
     # `n_chunks` by finding the closest prime factor of `n_chunks`
     # from `np.sqrt(n_chunks)`
     prime_factors = np.array([k for k in factorint(n_chunks)])
-    n_rows = prime_factors[np.argmin(prime_factors - np.sqrt(n_chunks))]
+    n_rows = prime_factors[np.argmin(abs(prime_factors - np.sqrt(n_chunks)))]
     n_columns = n_chunks // n_rows
     print(
         f"Split the image into {n_chunks} chunks: "
