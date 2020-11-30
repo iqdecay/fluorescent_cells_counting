@@ -11,19 +11,22 @@ Usage (for the current directory) :
 """
 directory = sys.argv[1]
 if not os.path.exists(directory):
-    raise NotADirectoryError(f"Provided argument {directory} isn't an existing directory")
+    raise NotADirectoryError(
+        f"Provided argument {directory} isn't an existing directory"
+    )
 
 for file in os.listdir(directory):
     filename, extension = os.path.splitext(file)
     directory_name = os.path.join(directory, filename)
-    if extension == ".czi" :
+    if extension == ".czi":
         if not os.path.exists(directory_name):
             os.makedirs(directory_name)
-        else :
+        else:
             print(f"Directory {directory_name} already exists, skipping")
         old_name = os.path.join(directory, file)
-        new_name = os.path.join(directory_name,file)
+        new_name = os.path.join(directory_name, file)
         os.rename(old_name, new_name)
-        print(f"Created directory {directory_name} and moved corresponding .czi"
-              " inside it")
-
+        print(
+            f"Created directory {directory_name} and moved corresponding .czi"
+            " inside it"
+        )
