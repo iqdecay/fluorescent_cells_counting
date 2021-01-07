@@ -1,6 +1,6 @@
 czifile==2019.7.2
 imagecodecs==2020.5.30
 numpy==1.19.2
+opencv-python==4.4.0.46
 six==1.15.0
-sympy==1.6.2
 tifffile==2020.10.1

@@ -1,9 +1,10 @@
+import errno
 import os
 
+import cv2
 import czifile
-import tifffile
 import numpy as np
-from sympy.ntheory import factorint
+import tifffile
 
 
 def load_czi_image(filename: str) -> np.array:
@@ -72,7 +73,9 @@ def convert_czi_to_three_grayscale_tiff(filename: str) -> None:
     for k, channel_array in enumerate(tiff_array):
         channel_filename = "".join([no_extension_filename, suffix[k], ".tiff"])
         if not os.path.exists(channel_filename):
-            tifffile.imwrite(channel_filename, channel_array)
+            tifffile.imwrite(
+                channel_filename, channel_array, photometric="minisblack"
+            )
             print(f"Created a .tiff file for {filename} on channel {'BGR'[k]}")
         else:
             print(
@@ -82,17 +85,17 @@ def convert_czi_to_three_grayscale_tiff(filename: str) -> None:
 
 
 def load_tiff_image(filename: str) -> np.array:
-    """
-    Load a `.tiff` file and return it as a numpy array.
-    Using the 'tifffile' module instead of opencv for 2 reasons :
-      - OpenCV can't open file ≥ 1 Gb
-      - OpenCV appears to apply some sort of threshold [x ≥ 255] and
-      loads the image in a array containing only 0s and 1s.
+    """Load a `.tiff` file and return it as a numpy array in grayscale (0 to 255).
 
     :param filename: path to the file to load.
     :return: the image as a numpy array.
     """
-    return tifffile.imread(filename)
+    if not os.path.exists(filename):
+        raise FileNotFoundError(
+            errno.ENOENT, os.strerror(errno.ENOENT), filename
+        )
+
+    return cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
 
 
 def split_image(filename: str, n_chunks: int) -> str:
@@ -105,13 +108,10 @@ def split_image(filename: str, n_chunks: int) -> str:
     :return : the directory in which the files were saved.
     """
     # Load the large image to chunk
-    large_image = tifffile.imread(filename)
+    large_image = load_tiff_image(filename)
 
-    # Find the optimal number of rows and columns to split the initial image in
-    # `n_chunks` by finding the closest prime factor of `n_chunks`
-    # from `np.sqrt(n_chunks)`
-    prime_factors = np.array([k for k in factorint(n_chunks)])
-    n_rows = prime_factors[np.argmin(abs(prime_factors - np.sqrt(n_chunks)))]
+    # Find the optimal number of rows and columns to split the initial image
+    n_rows = int(np.sqrt(n_chunks))
     n_columns = n_chunks // n_rows
     print(
         f"Split the image into {n_chunks} chunks: "
