@@ -11,77 +11,114 @@ from sklearn.linear_model import LinearRegression
 from image_processing import load_tiff_image
 
 
-def get_features_areas(filename: str):
-    """"""
+def extract_features_centers(filename: str) -> List[Tuple[float, float]]:
+    """
+    Extract areas in the centers of each square of the noise grid: those areas
+    should be less noisy. Due to the irregularity of acquisition gathering we
+    need to be smart, to do so, we process in multiple steps:
+
+        - Step 1: extract contours of each noise circles in the grid. Cells
+          area can hide those circles, thus we won't detect every area;
+
+        - Step 2: find coordinates of each center of detected circles;
+
+        - Step 3: group centers that should be on the same vertical and then
+          horizontal line;
+
+        - Step 4: interpolate lines described by those points
+
+        - Step 5: find each intersection between those lines. Thanks to this we
+          can have coordinates of hidden circles;
+
+    :param filename: path to the file to load.
+    :return: coordinates of each feature centers.
+    """
+    # Step 1
     # Load the image
     raw_image = load_tiff_image(filename)
-
     # Equalize the histogram of the loaded image
     equalized_lut = equalize_histogram(raw_image)
     equalized_image = equalized_lut[raw_image]
-
     # Inverse the LUT (blacks become whites) in order to highlight noise
     inverse_lut = 255 - np.arange(0, 256, 1)
     inversed_image = inverse_lut[equalized_image]
-
     # Emphasize noise areas and detect their centers
     emphasized_image = emphasize_noise_areas(inversed_image)
-    noise_areas_df = find_noise_areas(inversed_image)
+    noise_areas_df = detect_noise_areas(emphasized_image)
 
+    # Step 2 and 3
     # Group points that should describe the same vertical and horizontal line
-    X_groups = get_same_line_points(
-        noise_areas_df["X"].to_numpy().reshape(-1, 1)
-    )
-    Y_groups = get_same_line_points(
-        noise_areas_df["Y"].to_numpy().reshape(-1, 1)
-    )
+    X_groups = get_point_groups(noise_areas_df["X"].to_numpy().reshape(-1, 1))
+    Y_groups = get_point_groups(noise_areas_df["Y"].to_numpy().reshape(-1, 1))
     # Store it in the dataframe
     noise_areas_df["X_groups"] = X_groups
     noise_areas_df["Y_groups"] = Y_groups
 
+    # Step 4
     # Interpolate the grid
-    horizontal_lines = get_lines(noise_areas_df, "X", "Y")
-    vertical_lines = get_lines(noise_areas_df, "Y", "X")
+    horizontal_lines = interpolate_lines(noise_areas_df, "X", "Y")
+    vertical_lines = interpolate_lines(noise_areas_df, "Y", "X")
 
+    # Step 5
     # Find intersection points of the grid
-    x_intersections, y_intersections = get_intersection_points(
+    centers_coordinates = get_intersection_points(
         horizontal_lines, vertical_lines
     )
 
-    return x_intersections, y_intersections
+    return centers_coordinates
 
 
 def get_intersection_points(
     horizontal_lines: List[float], vertical_lines: List[float]
-) -> Tuple[List[float], List[float]]:
-    x_intersections, y_intersections = [], []
+) -> List[Tuple[float, float]]:
+    """Find coordinates of intersection between horizontal and vertical lines.
+
+    :param horizontal_lines: slopes and intercepts of horizontal lines.
+    :param vertical_lines: slopes and intercepts of vertical lines.
+    :return: coordinates of intersections.
+    """
+    centers_coordinates = []
     for l1, l2 in product(horizontal_lines, vertical_lines):
+        # Get the slope and the intercept of current lines
         a1, b1 = l1
         c2, d2 = l2
 
+        # Inverse the basis of the vertical line parameters
+        # x = c2 * y + d2 => y = (x / c2) - (d2 / c2) = a2 * x + b2
         a2 = 1 / c2
         b2 = -d2 / c2
 
-        x_intersections.append((b2 - b1) / (a1 - a2))
-        y_intersections.append(a1 * x + b1)
+        # Compute the intersection coordinates and store it
+        x = (b2 - b1) / (a1 - a2)
+        centers_coordinates.append((x, a1 * x + b1))
 
-    return x_intersections, y_intersections
+    return centers_coordinates
 
 
-def get_lines(
+def interpolate_lines(
     noise_areas_df: pd.DataFrame, x_name: str, y_name: str
-) -> List[float]:
-    """"""
-    line_parameters = []
+) -> List[Tuple[float, float]]:
+    """Interpolate a line passing through each group of points.
+
+    :param noise_areas_df: point coordinates and their attributed group.
+    :param x_name: name of the column of x-axis coordinates.
+    :param y_name: name of the column of y-axis coordinates.
+    :return: slopes and intercepts of lines.
+    """
+    # Get attributed group indices
     groups = noise_areas_df.groupby(f"{y_name}_groups")
+
+    line_parameters = []
     for name, group in groups:
+        # Check whether the group has more than 1 point (its name is -1) or not
         if name >= 0:
+            # Get x and y coordinates of points
             X = group[x_name].to_numpy().reshape(-1, 1)
             Y = group[y_name].to_numpy().reshape(-1, 1)
-
+            # Initialize and fit a line passing through each point of the group
             regressor = LinearRegression()
             regressor.fit(X, Y)
-
+            # Store the parameters
             line_parameters.append(
                 (regressor.coef_[0][0], regressor.intercept_[0])
             )
@@ -89,14 +126,18 @@ def get_lines(
     return line_parameters
 
 
-def get_point_groups(single_dim_coordinates: np.array) -> np.array:
-    """"""
+def get_point_groups(single_dim_coordinates: np.array) -> List[int]:
+    """Gather point that seems to be on the same line.
+
+    :param single_dim_coordinates: x or y coordinates of points.
+    :return: list of group indices of each point.
+    """
     n_points = single_dim_coordinates.size
 
     # Compute pairwise distance between each coordinate
     distances = squareform(pdist(single_dim_coordinates))
 
-    # Group points that are close together: they will be on the same line
+    # Gather points that are close from each others (will be on the same line)
     visited, groups = [], []
     # Gather points separated from a distance inferior than the threshold
     distance_threshold = 500
@@ -120,12 +161,13 @@ def get_point_groups(single_dim_coordinates: np.array) -> np.array:
 
             groups.append(current_group)
 
-    # Get a list where at the ith place there is group number of the ith point
+    # Fill a list: i-th place gives the group index of the i-th point
     sorted_group = np.zeros(n_points)
     for group_name, group_points in enumerate(groups):
         # Mark single element with -1 to avoid outliers
         if len(group_points) == 1:
             sorted_group[group_points[0]] = -1
+        # Otherwise fill the list with group points
         else:
             for point in group_points:
                 sorted_group[point] = group_name
@@ -133,8 +175,12 @@ def get_point_groups(single_dim_coordinates: np.array) -> np.array:
     return sorted_group
 
 
-def emphasize_noise_areas(image: np.array) -> pd.DataFrame:
-    """Erode and dilate the image in order to emphasize noise areas"""
+def emphasize_noise_areas(image: np.array) -> np.array:
+    """Erode and dilate the image in order to emphasize noise areas.
+
+    :param image: image to process.
+    :return: processed image.
+    """
     # Apply a binary threshold to separate noise areas and background
     _, processed_image = cv2.threshold(
         image.astype(np.uint8), 200, 255, cv2.THRESH_BINARY
@@ -156,8 +202,12 @@ def emphasize_noise_areas(image: np.array) -> pd.DataFrame:
     return emphasized_image
 
 
-def find_noise_areas(image: np.array) -> pd.DataFrame:
-    """"""
+def detect_noise_areas(image: np.array) -> pd.DataFrame:
+    """Detect centers of noise areas of an image by extracting their contours.
+
+    :param image: image to process.
+    :return: dataframe with coordinates of centers and surface of these areas.
+    """
     # Detect contours of noises areas
     contours, _ = cv2.findContours(
         image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
