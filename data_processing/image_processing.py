@@ -85,7 +85,10 @@ def convert_czi_to_three_grayscale_tiff(filename: str) -> None:
 
 
 def load_tiff_image(filename: str) -> np.array:
-    """Load a `.tiff` file and return it as a numpy array in grayscale (0 to 255).
+    """
+    Load a `.tiff` file and return it as a numpy array in grayscale (0 to 255).
+    It may have issue with the opening of the file with `opencv`, use
+    `tifffile` instead, but care with the pixel encoding.
 
     :param filename: path to the file to load.
     :return: the image as a numpy array.
@@ -95,6 +98,7 @@ def load_tiff_image(filename: str) -> np.array:
             errno.ENOENT, os.strerror(errno.ENOENT), filename
         )
 
+    # return tifffile.imread(filename)
     return cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
 
 
