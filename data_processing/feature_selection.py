@@ -8,10 +8,8 @@ from pandas.core.groupby.generic import DataFrameGroupBy
 from scipy.spatial.distance import squareform, pdist
 from sklearn.linear_model import LinearRegression
 
-from image_processing import load_tiff_image
 
-
-def extract_features_centers(filename: str) -> List[Tuple[float, float]]:
+def extract_noise_centers(raw_image: np.array) -> List[Tuple[float, float]]:
     """
     Extract areas in the centers of each square of the noise grid: those areas
     should be less noisy. Due to the irregularity of acquisition gathering we
@@ -30,12 +28,10 @@ def extract_features_centers(filename: str) -> List[Tuple[float, float]]:
         - Step 5: find each intersection between those lines. Thanks to this we
           can have coordinates of hidden circles;
 
-    :param filename: path to the file to load.
-    :return: coordinates of each feature centers.
+    :param raw_image: array of the gray image.
+    :return: coordinates of each noise area center.
     """
     # Step 1
-    # Load the image
-    raw_image = load_tiff_image(filename)
     # Equalize the histogram of the loaded image
     equalized_lut = equalize_histogram(raw_image)
     equalized_image = equalized_lut[raw_image]
@@ -43,7 +39,13 @@ def extract_features_centers(filename: str) -> List[Tuple[float, float]]:
     inverse_lut = 255 - np.arange(0, 256, 1)
     inversed_image = inverse_lut[equalized_image]
     # Emphasize noise areas and detect their centers
-    emphasized_image = emphasize_noise_areas(inversed_image)
+    emphasized_image = emphasize_white_areas(
+        inversed_image,
+        erosion_kernel=np.ones((5, 5), np.uint8),
+        dilatation_kernel=np.ones((20, 20), np.uint8),
+        n_erosions=3,
+        n_dilations=5,
+    )
     noise_areas_df = detect_noise_areas(emphasized_image)
 
     # Step 2 and 3
@@ -66,6 +68,50 @@ def extract_features_centers(filename: str) -> List[Tuple[float, float]]:
     )
 
     return centers_coordinates
+
+
+def extract_cell_area(raw_image: np.array) -> np.array:
+    """Extract areas with cells.
+
+    :param raw_image: array of the gray image.
+    :return: contour of cell's areas.
+    """
+    # Equalize the histogram of the loaded image
+    equalized_lut = equalize_histogram(raw_image)
+    equalized_image = equalized_lut[raw_image]
+    # Emphasize cell areas
+    emphasized_image = emphasize_white_areas(
+        equalized_image,
+        erosion_kernel=np.ones((3, 3), np.uint8),
+        dilatation_kernel=np.ones((30, 30), np.uint8),
+        n_erosions=2,
+        n_dilations=5,
+    )
+    # Find cell's contour
+    contours, _ = cv2.findContours(
+        emphasized_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE
+    )
+    # Get the largest found contour
+    cell_contour = max(contours, key=cv2.contourArea)
+
+    return cell_contour
+
+
+def get_inner_centers(
+    centers_coordinates: List[Tuple[float, float]], cell_contour: np.array
+) -> List[Tuple[float, float]]:
+    """Pick noise area centers that are in the cell contour.
+
+    :param centers_coordinates: coordinates of each noise area center.
+    :param cell_contour: contour of cell's areas.
+    """
+    inner_centers = []
+    for center in centers_coordinates:
+        # Check whether the current point is in cells
+        if cv2.pointPolygonTest(cell_contour, center, False) >= 0:
+            inner_centers.append(center)
+
+    return inner_centers
 
 
 def get_intersection_points(
@@ -175,8 +221,14 @@ def get_point_groups(single_dim_coordinates: np.array) -> List[int]:
     return sorted_group
 
 
-def emphasize_noise_areas(image: np.array) -> np.array:
-    """Erode and dilate the image in order to emphasize noise areas.
+def emphasize_white_areas(
+    image: np.array,
+    erosion_kernel: np.array,
+    dilatation_kernel: np.array,
+    n_erosions: int,
+    n_dilations: int,
+) -> np.array:
+    """Erode and dilate the image in order to emphasize white areas.
 
     :param image: image to process.
     :return: processed image.
@@ -187,14 +239,14 @@ def emphasize_noise_areas(image: np.array) -> np.array:
     )
 
     # Define erosion parameters and performs it
-    erosion_kernel = np.ones((5, 5), np.uint8)
-    erosion_iterations = 3
+    erosion_kernel = erosion_kernel
+    erosion_iterations = n_erosions
     eroded_image = cv2.erode(
         processed_image, erosion_kernel, iterations=erosion_iterations
     )
     # Define dilatation parameters and performs it
-    dilatation_kernel = np.ones((20, 20), np.uint8)
-    dilatation_iterations = 5
+    dilatation_kernel = dilatation_kernel
+    dilatation_iterations = n_dilations
     emphasized_image = cv2.dilate(
         eroded_image, dilatation_kernel, iterations=dilatation_iterations
     )
