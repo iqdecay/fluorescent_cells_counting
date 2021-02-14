@@ -31,26 +31,24 @@ move_file () {
 }
 
 
-
-# trap 'rm -r ./data/download/' EXIT
 mkdir -p ./data/downloads
 cd ./data/downloads
 
-# mkdir -p B5_dataset
-# mkdir -p ../B5_dataset
-# load_file ./B5_dataset/samples.zip https://data.broadinstitute.org/bbbc/BBBC005/BBBC005_v1_images.zip
-# load_file ./B5_dataset/labels.zip https://data.broadinstitute.org/bbbc/BBBC005/BBBC005_v1_ground_truth.zip
-# unzip_file ./B5_dataset/samples.zip ../B5_dataset/B5_samples/
-# unzip_file ./B5_dataset/labels.zip ../B5_dataset/B5_labels/
-# echo 'B5 dataset loaded'
+mkdir -p B5_dataset
+mkdir -p ../B5_dataset
+load_file ./B5_dataset/samples.zip https://data.broadinstitute.org/bbbc/BBBC005/BBBC005_v1_images.zip
+load_file ./B5_dataset/labels.zip https://data.broadinstitute.org/bbbc/BBBC005/BBBC005_v1_ground_truth.zip
+unzip_file ./B5_dataset/samples.zip ../B5_dataset/B5_samples/
+unzip_file ./B5_dataset/labels.zip ../B5_dataset/B5_labels/
+echo 'B5 dataset loaded'
 
-# mkdir -p B39_dataset
-# mkdir -p ../B39_dataset
-# load_file ./B39_dataset/samples.zip https://data.broadinstitute.org/bbbc/BBBC039/images.zip
-# load_file ./B39_dataset/labels.zip https://data.broadinstitute.org/bbbc/BBBC039/masks.zip
-# unzip_file ./B39_dataset/samples.zip ../B39_dataset/B39_samples/
-# unzip_file ./B39_dataset/labels.zip ../B39_dataset/B39_labels/
-# echo 'B39 dataset loaded'
+mkdir -p B39_dataset
+mkdir -p ../B39_dataset
+load_file ./B39_dataset/samples.zip https://data.broadinstitute.org/bbbc/BBBC039/images.zip
+load_file ./B39_dataset/labels.zip https://data.broadinstitute.org/bbbc/BBBC039/masks.zip
+unzip_file ./B39_dataset/samples.zip ../B39_dataset/B39_samples/
+unzip_file ./B39_dataset/labels.zip ../B39_dataset/B39_labels/
+echo 'B39 dataset loaded'
 
 mkdir -p TNBC_dataset
 mkdir -p ../TNBC_dataset
@@ -62,15 +60,15 @@ move_file ./TNBC_dataset/data/TNBC_NucleiSegmentation/Slide_*/* ../TNBC_dataset/
 move_file ./TNBC_dataset/data/TNBC_NucleiSegmentation/GT_*/* ../TNBC_dataset/TNBC_labels/
 echo 'TNBC dataset loaded'
 
-# mkdir -p ssTEM_dataset
-# mkdir -p ../ssTEM_dataset
-# mkdir -p ../ssTEM_dataset/ssTEM_samples
-# mkdir -p ../ssTEM_dataset/ssTEM_labels
-# load_file ./ssTEM_dataset/data.zip -L https://github.com/unidesigner/groundtruth-drosophila-vnc/archive/master.zip
-# unzip_file ./ssTEM_dataset/data.zip ./ssTEM_dataset/data/
-# move_file ./groundtruth-drosophila-vnc-master/stack1/raw/* ../ssTEM_dataset/ssTEM_samples/
-# move_file ./groundtruth-drosophila-vnc-master/stack1/mitochondria/* ../ssTEM_dataset/ssTEM_labels/
-# echo 'ssTEM dataset loaded'
+mkdir -p ssTEM_dataset
+mkdir -p ../ssTEM_dataset
+mkdir -p ../ssTEM_dataset/ssTEM_samples
+mkdir -p ../ssTEM_dataset/ssTEM_labels
+load_file ./ssTEM_dataset/data.zip -L https://github.com/unidesigner/groundtruth-drosophila-vnc/archive/master.zip
+unzip_file ./ssTEM_dataset/data.zip ./ssTEM_dataset/data/
+move_file ./groundtruth-drosophila-vnc-master/stack1/raw/* ../ssTEM_dataset/ssTEM_samples/
+move_file ./groundtruth-drosophila-vnc-master/stack1/mitochondria/* ../ssTEM_dataset/ssTEM_labels/
+echo 'ssTEM dataset loaded'
 
 mkdir -p EM_dataset
 mkdir -p ../EM_dataset
