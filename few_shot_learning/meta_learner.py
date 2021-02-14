@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 from torchsummary import summary
 
@@ -6,7 +7,10 @@ from models import FCRN, UNet
 
 class MetaLearner:
     def __init__(self, model: nn.Module):
-        self.model = model
+        self.device = torch.device(
+            "cuda:0" if torch.cuda.is_available() else "cpu"
+        )
+        self.model = model.to(self.device)
 
     def print_model_summary(self):
         """"Print the model's architecture summary."""
