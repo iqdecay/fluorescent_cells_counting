@@ -26,19 +26,19 @@ unzip_file () {
 mkdir -p ./data/downloads
 cd ./data/downloads
 
-mkdir -p B5_dataset
-mkdir -p ../B5_dataset
-mkdir -p ../B5_dataset/B5_samples
-mkdir -p ../B5_dataset/B5_labels
-cd B5_dataset
-load_file samples.zip https://data.broadinstitute.org/bbbc/BBBC005/BBBC005_v1_images.zip
-load_file labels.zip https://data.broadinstitute.org/bbbc/BBBC005/BBBC005_v1_ground_truth.zip
-unzip_file samples.zip BBBC005_v1_images
-unzip_file labels.zip BBBC005_v1_ground_truth
-cd ..
-mv ./B5_dataset/BBBC005_v1_images/* ../B5_dataset/B5_samples
-mv ./B5_dataset/BBBC005_v1_ground_truth/* ../B5_dataset/B5_labels
-echo 'B5 dataset loaded'
+# mkdir -p B5_dataset
+# mkdir -p ../B5_dataset
+# mkdir -p ../B5_dataset/B5_samples
+# mkdir -p ../B5_dataset/B5_labels
+# cd B5_dataset
+# load_file samples.zip https://data.broadinstitute.org/bbbc/BBBC005/BBBC005_v1_images.zip
+# load_file labels.zip https://data.broadinstitute.org/bbbc/BBBC005/BBBC005_v1_ground_truth.zip
+# unzip_file samples.zip BBBC005_v1_images
+# unzip_file labels.zip BBBC005_v1_ground_truth
+# cd ..
+# mv ./B5_dataset/BBBC005_v1_images/* ../B5_dataset/B5_samples 2>/dev/null
+# mv ./B5_dataset/BBBC005_v1_ground_truth/* ../B5_dataset/B5_labels 2>/dev/null
+# echo 'B5 dataset loaded'
 
 mkdir -p B39_dataset
 mkdir -p ../B39_dataset
@@ -50,8 +50,8 @@ load_file labels.zip https://data.broadinstitute.org/bbbc/BBBC039/masks.zip
 unzip_file samples.zip images
 unzip_file labels.zip masks
 cd ..
-mv ./B39_dataset/images/* ../B39_dataset/B39_samples
-mv ./B39_dataset/masks/* ../B39_dataset/B39_labels
+mv ./B39_dataset/images/* ../B39_dataset/B39_samples 2>/dev/null
+mv ./B39_dataset/masks/* ../B39_dataset/B39_labels 2>/dev/null
 echo 'B39 dataset loaded'
 
 mkdir -p TNBC_dataset
@@ -62,8 +62,8 @@ cd TNBC_dataset
 load_file data.zip https://zenodo.org/record/1175282/files/TNBC_NucleiSegmentation.zip?download=1
 unzip_file data.zip TNBC_NucleiSegmentation
 cd ..
-mv ./TNBC_dataset/TNBC_NucleiSegmentation/Slide_*/* ../TNBC_dataset/TNBC_samples
-mv ./TNBC_dataset/TNBC_NucleiSegmentation/GT_*/* ../TNBC_dataset/TNBC_labels
+mv ./TNBC_dataset/TNBC_NucleiSegmentation/Slide_*/* ../TNBC_dataset/TNBC_samples 2>/dev/null
+mv ./TNBC_dataset/TNBC_NucleiSegmentation/GT_*/* ../TNBC_dataset/TNBC_labels 2>/dev/null
 echo 'TNBC dataset loaded'
 
 mkdir -p ssTEM_dataset
@@ -74,8 +74,8 @@ cd ssTEM_dataset
 load_file data.zip https://github.com/unidesigner/groundtruth-drosophila-vnc/archive/master.zip
 unzip_file data.zip groundtruth-drosophila-vnc-master
 cd ..
-mv ./ssTEM_dataset/groundtruth-drosophila-vnc-master/stack1/raw/* ../ssTEM_dataset/ssTEM_samples/
-mv ./ssTEM_dataset/groundtruth-drosophila-vnc-master/stack1/mitochondria/* ../ssTEM_dataset/ssTEM_labels/
+mv ./ssTEM_dataset/groundtruth-drosophila-vnc-master/stack1/raw/* ../ssTEM_dataset/ssTEM_samples/ 2>/dev/null
+mv ./ssTEM_dataset/groundtruth-drosophila-vnc-master/stack1/mitochondria/* ../ssTEM_dataset/ssTEM_labels/ 2>/dev/null
 echo 'ssTEM dataset loaded'
 
 mkdir -p EM_dataset
