@@ -1,3 +1,4 @@
+import os
 from itertools import product
 from typing import List, Tuple
 
@@ -11,7 +12,8 @@ from sklearn.linear_model import LinearRegression
 from image_processing import load_tiff_image
 
 
-def extract_features_centers(filename: str) -> List[Tuple[float, float]]:
+def extract_features_centers(filename: str) -> Tuple[
+    List[Tuple[float, float]], np.array]:
     """
     Extract areas in the centers of each square of the noise grid: those areas
     should be less noisy. Due to the irregularity of acquisition gathering we
@@ -31,7 +33,8 @@ def extract_features_centers(filename: str) -> List[Tuple[float, float]]:
           can have coordinates of hidden circles;
 
     :param filename: path to the file to load.
-    :return: coordinates of each feature centers.
+    :return: coordinates of each feature centers, the image with normalized
+    histogram
     """
     # Step 1
     # Load the image
@@ -65,11 +68,11 @@ def extract_features_centers(filename: str) -> List[Tuple[float, float]]:
         horizontal_lines, vertical_lines
     )
 
-    return centers_coordinates
+    return centers_coordinates, equalized_image
 
 
 def get_intersection_points(
-    horizontal_lines: List[float], vertical_lines: List[float]
+        horizontal_lines: List[float], vertical_lines: List[float]
 ) -> List[Tuple[float, float]]:
     """Find coordinates of intersection between horizontal and vertical lines.
 
@@ -96,7 +99,7 @@ def get_intersection_points(
 
 
 def interpolate_lines(
-    noise_areas_df: pd.DataFrame, x_name: str, y_name: str
+        noise_areas_df: pd.DataFrame, x_name: str, y_name: str
 ) -> List[Tuple[float, float]]:
     """Interpolate a line passing through each group of points.
 
@@ -153,7 +156,7 @@ def get_point_groups(single_dim_coordinates: np.array) -> List[int]:
             for j in range(n_points):
                 # Check whether the point is close from the current point
                 if (distances[i][j] < distance_threshold) and (
-                    j not in visited
+                        j not in visited
                 ):
                     # Mark the point as visited and add it in the current group
                     visited.append(j)
@@ -245,7 +248,7 @@ def equalize_histogram(image: np.array) -> np.array:
     """
     # Compute the histogram
     histogram = cv2.calcHist([image], [0], None, [256], [0, 256])
-    # Compute the cummulative histogram
+    # Compute the cumulative histogram
     cumulative_histogram = histogram.cumsum()
 
     # Mask zero pixels in order to not take them into account when
@@ -253,12 +256,9 @@ def equalize_histogram(image: np.array) -> np.array:
     masked_cumulative_histogram = np.ma.masked_equal(cumulative_histogram, 0)
     # Equalise the histogram
     masked_cumulative_histogram = (
-        (masked_cumulative_histogram - masked_cumulative_histogram.min())
-        * 255
-        / (
-            masked_cumulative_histogram.max()
-            - masked_cumulative_histogram.min()
-        )
+            (masked_cumulative_histogram - masked_cumulative_histogram.min())
+            * 255 / (masked_cumulative_histogram.max() -
+                     masked_cumulative_histogram.min())
     )
 
     equalised_histogram = np.ma.filled(masked_cumulative_histogram, 0).astype(
@@ -266,3 +266,46 @@ def equalize_histogram(image: np.array) -> np.array:
     )
 
     return equalised_histogram
+
+
+def crop_and_save_centers(filename: str, height: int, width: int) -> None:
+    """
+    Given a filename, extract the noise centers of that image,
+    and around each center, crop a sub-image with size height*width.
+    :param filename: path to the .tiff file (red channel is recommended)
+    :param height: height of the crop around each center
+    :param width: width of the crop around each center
+    :return: None
+    """
+    directory = os.path.dirname(filename)
+    base = os.path.basename(filename)
+    name, _ = os.path.splitext(base)
+    crop_dir = name + f"_cropped_{height}x{width}"
+    crop_dir = os.path.join(directory, crop_dir)
+    if not os.path.exists(crop_dir):
+        os.mkdir(crop_dir)
+        print(f"Created {crop_dir} to save the cropped images for {filename}")
+    else:
+        print(f"Directory {crop_dir} already exists")
+    print(f"Finding centers of {filename}")
+    centers_coordinates, image = extract_features_centers(filename)
+    print(f"Found {len(centers_coordinates)} centers for image {filename}")
+    h, w = image.shape
+    cropped_images = 0
+    for i, (column, row) in enumerate(centers_coordinates):
+        column = int(round(column))
+        row = int(round(row))
+        if 0 <= row < h and 0 <= column < w:
+            left = max(0, column - width // 2)
+            right = min(w, column + width // 2)
+            top = max(0, row - height // 2)
+            bottom = min(h, row + height // 2)
+            cropped = image[top: bottom, left:right]
+            path = os.path.join(crop_dir, f"center_{i}")
+            np.save(path, cropped)
+            cropped_images += 1
+        else:
+            print(
+                f"Center {i} is out of bounds for image of size {h}x{w} "
+                f"with coordinates {column, row}")
+    print(f"Saved {cropped_images} cropped images in {crop_dir}")
