@@ -3,7 +3,7 @@ import os
 import random
 from typing import List, Tuple
 
-from PIL import Image
+import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -41,8 +41,8 @@ class MixedDataset(Dataset):
             index = index.tolist()
 
         sample_path, label_path = self.data[index]
-        sample_image = Image.open(sample_path).resize((256, 256)).convert("L")
-        label_mask = Image.open(label_path).resize((256, 256)).convert("L")
+        sample_image = cv2.imread(sample_path, cv2.IMREAD_GRAYSCALE)
+        label_mask = cv2.imread(label_path, cv2.IMREAD_GRAYSCALE)
 
         if self.transform:
             sample_image, label_mask = self._transform(
