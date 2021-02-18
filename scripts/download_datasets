@@ -28,8 +28,8 @@ cd ./data/downloads
 
 # mkdir -p B5_dataset
 # mkdir -p ../B5_dataset
-# mkdir -p ../B5_dataset/B5_samples
-# mkdir -p ../B5_dataset/B5_labels
+# mkdir -p ../B5_dataset/B5_raw_samples
+# mkdir -p ../B5_dataset/B5_raw_labels
 # cd B5_dataset
 # load_file samples.zip https://data.broadinstitute.org/bbbc/BBBC005/BBBC005_v1_images.zip
 # load_file labels.zip https://data.broadinstitute.org/bbbc/BBBC005/BBBC005_v1_ground_truth.zip
@@ -42,8 +42,8 @@ cd ./data/downloads
 
 mkdir -p B39_dataset
 mkdir -p ../B39_dataset
-mkdir -p ../B39_dataset/B39_samples
-mkdir -p ../B39_dataset/B39_labels
+mkdir -p ../B39_dataset/B39_raw_samples
+mkdir -p ../B39_dataset/B39_raw_labels
 cd B39_dataset
 load_file samples.zip https://data.broadinstitute.org/bbbc/BBBC039/images.zip
 load_file labels.zip https://data.broadinstitute.org/bbbc/BBBC039/masks.zip
@@ -56,8 +56,8 @@ echo 'B39 dataset loaded'
 
 mkdir -p TNBC_dataset
 mkdir -p ../TNBC_dataset
-mkdir -p ../TNBC_dataset/TNBC_samples
-mkdir -p ../TNBC_dataset/TNBC_labels
+mkdir -p ../TNBC_dataset/TNBC_raw_samples
+mkdir -p ../TNBC_dataset/TNBC_raw_labels
 cd TNBC_dataset
 load_file data.zip https://zenodo.org/record/1175282/files/TNBC_NucleiSegmentation.zip?download=1
 unzip_file data.zip TNBC_NucleiSegmentation
@@ -68,8 +68,8 @@ echo 'TNBC dataset loaded'
 
 mkdir -p ssTEM_dataset
 mkdir -p ../ssTEM_dataset
-mkdir -p ../ssTEM_dataset/ssTEM_samples
-mkdir -p ../ssTEM_dataset/ssTEM_labels
+mkdir -p ../ssTEM_dataset/ssTEM_raw_samples
+mkdir -p ../ssTEM_dataset/ssTEM_raw_labels
 cd ssTEM_dataset
 load_file data.zip https://github.com/unidesigner/groundtruth-drosophila-vnc/archive/master.zip
 unzip_file data.zip groundtruth-drosophila-vnc-master
@@ -82,7 +82,7 @@ mkdir -p EM_dataset
 mkdir -p ../EM_dataset
 load_file ./EM_dataset/samples https://documents.epfl.ch/groups/c/cv/cvlab-unit/www/data/%20ElectronMicroscopy_Hippocampus/training.tif
 load_file ./EM_dataset/labels https://documents.epfl.ch/groups/c/cv/cvlab-unit/www/data/%20ElectronMicroscopy_Hippocampus/training_groundtruth.tif
-split_tiff ./EM_dataset/samples ../EM_dataset/EM_samples/
-split_tiff ./EM_dataset/labels ../EM_dataset/EM_labels/
+split_tiff ./EM_dataset/samples ../EM_dataset/EM_raw_samples/
+split_tiff ./EM_dataset/labels ../EM_dataset/EM_raw_labels/
 echo 'EM dataset loaded'
 
