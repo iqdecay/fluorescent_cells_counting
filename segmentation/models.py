@@ -157,7 +157,7 @@ class UNet(nn.Module):
         in_channels: int = 1,
         out_channels: int = 32,
         kernel_size: int = 3,
-        add_sigmoid: bool = False,
+        add_sigmoid: bool = True,
         affine: bool = False,
     ):
         super(UNet, self).__init__()
