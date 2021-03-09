@@ -309,3 +309,29 @@ def crop_and_save_centers(filename: str, height: int, width: int) -> None:
                 f"Center {i} is out of bounds for image of size {h}x{w} "
                 f"with coordinates {column, row}")
     print(f"Saved {cropped_images} cropped images in {crop_dir}")
+    
+   
+def contract_edge(
+    cell_contour: np.array, image: np.array, 
+    erosion_kernel: np.array = np.ones((9, 9), np.uint8),
+    iterations: int = 50
+) -> np.array:
+    
+    """
+    Given an image and the contour of the cell, return the contracted
+    contour.
+    :param cell_contour: contour before erosion
+    :param image: image on which we make pre-processing
+    :param erosion_kernel: kernel which should be used for erosion
+    :param iterations: number of iterations in the erosion process
+    :return: cell_contour_eroded: contracted contour
+    """
+    cimg = np.zeros_like(image)
+    cimg = cv2.fillPoly(cimg, pts =[cell_contour], color=(255,255,255))
+    cimg = cv2.erode (cimg,erosion_kernel, iterations=iterations)
+    cell_contour_eroded, _ = cv2.findContours(
+        cimg, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE
+        )
+    return cell_contour_eroded
+
+    
