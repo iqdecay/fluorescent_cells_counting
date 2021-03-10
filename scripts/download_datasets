@@ -26,20 +26,20 @@ unzip_file () {
 mkdir -p ./data/downloads
 cd ./data/downloads
 
-# mkdir -p B5_dataset
-# mkdir -p ../B5_dataset
-# mkdir -p ../B5_dataset/B5_raw_samples
-# mkdir -p ../B5_dataset/B5_raw_labels
-# cd B5_dataset
-# load_file samples.zip https://data.broadinstitute.org/bbbc/BBBC005/BBBC005_v1_images.zip
-# load_file labels.zip https://data.broadinstitute.org/bbbc/BBBC005/BBBC005_v1_ground_truth.zip
-# unzip_file samples.zip BBBC005_v1_images
-# unzip_file labels.zip BBBC005_v1_ground_truth
-# cd ..
-# mv ./B5_dataset/BBBC005_v1_images/* ../B5_dataset/B5_raw_samples>/dev/null
-# mv ./B5_dataset/BBBC005_v1_ground_truth/* ../B5_dataset/B5_raw_labels 2>/dev/null
-# python ../../scripts/split_images.py ../ B5
-# echo 'B5 dataset loaded'
+mkdir -p B5_dataset
+mkdir -p ../B5_dataset
+mkdir -p ../B5_dataset/B5_raw_samples
+mkdir -p ../B5_dataset/B5_raw_labels
+cd B5_dataset
+load_file samples.zip https://data.broadinstitute.org/bbbc/BBBC005/BBBC005_v1_images.zip
+load_file labels.zip https://data.broadinstitute.org/bbbc/BBBC005/BBBC005_v1_ground_truth.zip
+unzip_file samples.zip BBBC005_v1_images
+unzip_file labels.zip BBBC005_v1_ground_truth
+cd ..
+mv ./B5_dataset/BBBC005_v1_images/* ../B5_dataset/B5_raw_samples>/dev/null
+mv ./B5_dataset/BBBC005_v1_ground_truth/* ../B5_dataset/B5_raw_labels 2>/dev/null
+python ../../scripts/split_images.py ../ B5
+echo 'B5 dataset loaded'
 
 mkdir -p B39_dataset
 mkdir -p ../B39_dataset

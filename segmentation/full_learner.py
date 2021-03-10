@@ -1,5 +1,6 @@
 from collections import defaultdict
 import os
+import sys
 from typing import Any, Dict, Tuple
 
 import pandas as pd
@@ -229,6 +230,21 @@ class FullLearner:
         torch.save(self.model, saving_path)
         print("Best model saved")
 
+    def load(
+        self,
+        model_path=None,
+    ):
+        """Load a saved model."""
+        # Necessary, in order to avoid an `AttributeError`
+        current_file = os.path.dirname(os.path.abspath(__file__))
+        if current_file not in sys.path:
+            sys.path.append(current_file)
+
+        if model_path is None:
+            model_path = f"{self.root_dir}/models/{self.model_name}.pth"
+
+        self.net = torch.load(model_path, map_location=self.device)
+
 
 if __name__ == "__main__":
     hyperparams = {
@@ -238,10 +254,10 @@ if __name__ == "__main__":
 
     model_name = "UNet"
     if model_name == "FCRN":
-        learner = FullLearner(FCRN(), hyperparams, "./")
+        learner = FullLearner(FCRN(), hyperparams, ".")
         learner.print_model_summary()
     else:
-        learner = FullLearner(UNet(), hyperparams, "./")
+        learner = FullLearner(UNet(), hyperparams, ".")
         learner.print_model_summary()
 
     train_dataset = MixedDataset("./data", ["TNBC"], True)
@@ -249,4 +265,5 @@ if __name__ == "__main__":
     test_dataset = MixedDataset("./data", ["ssTEM"], False)
     test_loader = DataLoader(train_dataset, shuffle=True)
 
-    learner.fit(train_loader, test_loader, 20)
+    # learner.fit(train_loader, test_loader, 20)
+    learner.load()
