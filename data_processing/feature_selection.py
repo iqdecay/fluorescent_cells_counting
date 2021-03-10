@@ -297,10 +297,11 @@ def crop_centers(image: np.array, height: int, width: int) -> None:
     :param image : the image, as a numpy array
     :param height: height of the crop around each center
     :param width: width of the crop around each center
-    :return: None
+    :return: cropped_images : list of cropped images
     """
     centers_coordinates, img = extract_features_centers(image)
     print(f"Found {len(centers_coordinates)} centers for image {img}")
+    contour_mask,cell_contour = find_contour_image(image)
     h, w = img.shape
     cropped_images = []
     for i, (column, row) in enumerate(centers_coordinates):
@@ -312,7 +313,9 @@ def crop_centers(image: np.array, height: int, width: int) -> None:
             top = max(0, row - height // 2)
             bottom = min(h, row + height // 2)
             cropped = image[top: bottom, left:right]
-            cropped_images.append(cropped)
+            contour_mask_cropped = contour_mask[top: bottom, left:right]
+            cropped_cells = cv2.bitwise_and(cropped,cropped, mask = contour_mask_cropped)
+            cropped_images.append(cropped_cells)
         else:
             print(
                 f"Center {i} is out of bounds for image of size {h}x{w} "
