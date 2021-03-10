@@ -290,7 +290,7 @@ def save_centers(filename: str, cropped: np.array, center_n: int) -> None:
     print(f"Finding centers of {filename}")
 
 
-def crop_and_save_centers(image: np.array, height: int, width: int) -> None:
+def crop_centers(image: np.array, height: int, width: int) -> None:
     """
     Given an image, extract the noise centers of that image,
     and around each center, crop a sub-image with size height*width.
@@ -299,9 +299,9 @@ def crop_and_save_centers(image: np.array, height: int, width: int) -> None:
     :param width: width of the crop around each center
     :return: None
     """
-    centers_coordinates, image = extract_features_centers(filename)
-    print(f"Found {len(centers_coordinates)} centers for image {filename}")
-    h, w = image.shape
+    centers_coordinates, img = extract_features_centers(image)
+    print(f"Found {len(centers_coordinates)} centers for image {img}")
+    h, w = img.shape
     cropped_images = []
     for i, (column, row) in enumerate(centers_coordinates):
         column = int(round(column))
@@ -317,7 +317,8 @@ def crop_and_save_centers(image: np.array, height: int, width: int) -> None:
             print(
                 f"Center {i} is out of bounds for image of size {h}x{w} "
                 f"with coordinates {column, row}")
-    print(f"Saved {len(cropped_images)} cropped images")
+    #print(f"Saved {len(cropped_images)} cropped images")
+    return cropped_images
 
 
 def contract_edge(
