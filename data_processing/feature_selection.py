@@ -342,3 +342,40 @@ def contract_edge(
         cimg, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE
     )
     return cell_contour_eroded
+
+
+def find_contour_image(
+        image: np.array,
+        erosion_kernel: np.array = np.ones((3, 3), np.uint8),
+        dilatation_kernel: np.array = np.ones((30, 30), np.uint8),
+        n_erosions: int = 2,
+        n_dilatations: int = 5
+) -> List[np.array,np.array]:
+    """
+    Given an image return the contour of the cells membrane
+    :param image: image on which we make pre-processing
+    :param erosion_kernel: kernel which should be used for erosion
+    :param dilatation_kernel: kernel which should be used for dilatation
+    :param n_erosionss: number of iterations in the erosion process
+    :param n_dilatations: number of iterations in the dilatation process
+    :return: cell_contour: contour of the cells membrane
+    :return: contour_mask: mask corresponding to the contour
+    """
+    
+    emphasized_image = emphasize_noise_areas(
+    image,
+    erosion_kernel=erosion_kernel,
+    dilatation_kernel=dilatation_kernel,
+    n_erosions=n_erosions,
+    n_dilations=n_dilatations,
+    )
+    contours, _ = cv2.findContours(
+    emphasized_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    cell_contour = max(contours, key=cv2.contourArea)
+    
+    contour_mask = np.zeros_like(emphasized_image)
+    contour_mask = cv2.fillPoly(
+    contour_mask, pts =[cell_contour], color=(255,255,255)
+    )
+    return (contour_mask,cell_contour)
+
