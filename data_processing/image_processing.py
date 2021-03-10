@@ -160,3 +160,27 @@ def split_image(filename: str, n_chunks: int) -> str:
 
     print(f"All chunks saved in {saving_directory}")
     return saving_directory
+
+
+def get_slices(sample: np.array, label: np.array, height: int, width: int,
+               remove_black_images: bool, threshold: float):
+    couples = []
+    assert (
+            sample.shape == label.shape
+    ), f"Non-matching dimensions between image {sample.shape} and label {label.shape}"
+    h, w = sample.shape
+    steps_x = w // width
+    steps_y = h // height
+    for row in range(0, steps_y):
+        for column in range(0, steps_x):
+            left = column * width
+            right = (column + 1) * width
+            top = row * height
+            bottom = (row + 1) * height
+            cropped_sample = sample[top:bottom, left:right]
+            non_zero = np.count_nonzero(cropped_sample)
+            if non_zero < threshold and remove_black_images:
+                continue
+            cropped_label = label[top:bottom, left:right]
+            couples.append((cropped_sample, cropped_label))
+    return couples
