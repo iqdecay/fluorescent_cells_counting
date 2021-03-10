@@ -12,7 +12,7 @@ from sklearn.linear_model import LinearRegression
 from image_processing import load_tiff_image
 
 
-def extract_features_centers(filename: str) -> Tuple[
+def extract_features_centers(image: np.array) -> Tuple[
     List[Tuple[float, float]], np.array]:
     """
     Extract areas in the centers of each square of the noise grid: those areas
@@ -37,11 +37,9 @@ def extract_features_centers(filename: str) -> Tuple[
     histogram
     """
     # Step 1
-    # Load the image
-    raw_image = load_tiff_image(filename)
     # Equalize the histogram of the loaded image
-    equalized_lut = equalize_histogram(raw_image)
-    equalized_image = equalized_lut[raw_image]
+    equalized_lut = equalize_histogram(image)
+    equalized_image = equalized_lut[image]
     # Inverse the LUT (blacks become whites) in order to highlight noise
     inverse_lut = 255 - np.arange(0, 256, 1)
     inversed_image = inverse_lut[equalized_image]
@@ -268,18 +266,18 @@ def equalize_histogram(image: np.array) -> np.array:
     return equalised_histogram
 
 
-def crop_and_save_centers(filename: str, height: int, width: int) -> None:
+def save_centers(filename: str, cropped: np.array, center_n: int) -> None:
     """
-    Given a filename, extract the noise centers of that image,
-    and around each center, crop a sub-image with size height*width.
+    Given a filename and a crop made around the nth center of that image
+    save the crop under the corresponding directory
     :param filename: path to the .tiff file (red channel is recommended)
-    :param height: height of the crop around each center
-    :param width: width of the crop around each center
-    :return: None
+    :param cropped: a part of the tiff file
+    :param center_n: number of the center the crop was made around
     """
     directory = os.path.dirname(filename)
     base = os.path.basename(filename)
     name, _ = os.path.splitext(base)
+    height, width = cropped.shape[0], cropped.shape[1]
     crop_dir = name + f"_cropped_{height}x{width}"
     crop_dir = os.path.join(directory, crop_dir)
     if not os.path.exists(crop_dir):
@@ -287,11 +285,24 @@ def crop_and_save_centers(filename: str, height: int, width: int) -> None:
         print(f"Created {crop_dir} to save the cropped images for {filename}")
     else:
         print(f"Directory {crop_dir} already exists")
+    path = os.path.join(crop_dir, f"center_{i}")
+    np.save(path, cropped)
     print(f"Finding centers of {filename}")
+
+
+def crop_and_save_centers(image: np.array, height: int, width: int) -> None:
+    """
+    Given an image, extract the noise centers of that image,
+    and around each center, crop a sub-image with size height*width.
+    :param image : the image, as a numpy array
+    :param height: height of the crop around each center
+    :param width: width of the crop around each center
+    :return: None
+    """
     centers_coordinates, image = extract_features_centers(filename)
     print(f"Found {len(centers_coordinates)} centers for image {filename}")
     h, w = image.shape
-    cropped_images = 0
+    cropped_images = []
     for i, (column, row) in enumerate(centers_coordinates):
         column = int(round(column))
         row = int(round(row))
@@ -301,22 +312,19 @@ def crop_and_save_centers(filename: str, height: int, width: int) -> None:
             top = max(0, row - height // 2)
             bottom = min(h, row + height // 2)
             cropped = image[top: bottom, left:right]
-            path = os.path.join(crop_dir, f"center_{i}")
-            np.save(path, cropped)
-            cropped_images += 1
+            cropped_images.append(cropped)
         else:
             print(
                 f"Center {i} is out of bounds for image of size {h}x{w} "
                 f"with coordinates {column, row}")
-    print(f"Saved {cropped_images} cropped images in {crop_dir}")
-    
-   
+    print(f"Saved {len(cropped_images)} cropped images")
+
+
 def contract_edge(
-    cell_contour: np.array, image: np.array, 
-    erosion_kernel: np.array = np.ones((9, 9), np.uint8),
-    iterations: int = 50
+        cell_contour: np.array, image: np.array,
+        erosion_kernel: np.array = np.ones((9, 9), np.uint8),
+        iterations: int = 50
 ) -> np.array:
-    
     """
     Given an image and the contour of the cell, return the contracted
     contour.
@@ -327,11 +335,9 @@ def contract_edge(
     :return: cell_contour_eroded: contracted contour
     """
     cimg = np.zeros_like(image)
-    cimg = cv2.fillPoly(cimg, pts =[cell_contour], color=(255,255,255))
-    cimg = cv2.erode (cimg,erosion_kernel, iterations=iterations)
+    cimg = cv2.fillPoly(cimg, pts=[cell_contour], color=(255, 255, 255))
+    cimg = cv2.erode(cimg, erosion_kernel, iterations=iterations)
     cell_contour_eroded, _ = cv2.findContours(
         cimg, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE
-        )
+    )
     return cell_contour_eroded
-
-    
