@@ -382,3 +382,36 @@ def find_contour_image(
     )
     return (contour_mask,cell_contour)
 
+
+def preprocess_data(images_filename: str,
+                    storage_preprocessed_images: str,
+                    height: int, 
+                    width: int
+    ) -> None:
+    """
+    Given a directory with images to preprocess and a folder to store
+    the pre-processed data, create a folder with the pre-processed images
+    :param filename: filename containing all tiff images
+    :param storage_preprocessed_image: place where we want to store
+    preprocessed images (in a file named images_pre_processed
+    :param height: height which is used to crop images
+    :param width: width which is used to crop images
+    """
+    (_, _, images) = walk(images_filename).next()
+    final_directory = os.path.join(storage_preprocessed_images, 
+                                   'images_pre_processed')
+    if not os.path.exists(final_directory):
+        os.makedirs(final_directory)
+        for image in images:
+            target_path = os.path.join(final_directory,image)
+            os.makedirs(target_path)
+            cropped_images = crop_centers(
+                cv2.imread(os.path.join(images_filename,image)),
+                height,width)
+            for i in range len(cropped_images):
+                cv2.imwrite(
+                    os.path.join(target_path, filename+"crop_{}".format(i))
+                )
+             
+            
+
