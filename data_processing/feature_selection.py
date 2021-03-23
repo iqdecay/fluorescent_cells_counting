@@ -5,7 +5,6 @@ from typing import List, Tuple
 import cv2
 import numpy as np
 import pandas as pd
-from pandas.core.groupby.generic import DataFrameGroupBy
 from scipy.spatial.distance import squareform, pdist
 from sklearn.linear_model import LinearRegression
 
