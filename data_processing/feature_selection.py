@@ -1,3 +1,4 @@
+import os
 from itertools import product
 from typing import List, Tuple
 
@@ -11,7 +12,8 @@ from sklearn.linear_model import LinearRegression
 from image_processing import load_tiff_image
 
 
-def extract_features_centers(filename: str) -> List[Tuple[float, float]]:
+def extract_features_centers(image: np.array) -> Tuple[
+    List[Tuple[float, float]], np.array]:
     """
     Extract areas in the centers of each square of the noise grid: those areas
     should be less noisy. Due to the irregularity of acquisition gathering we
@@ -31,14 +33,13 @@ def extract_features_centers(filename: str) -> List[Tuple[float, float]]:
           can have coordinates of hidden circles;
 
     :param filename: path to the file to load.
-    :return: coordinates of each feature centers.
+    :return: coordinates of each feature centers, the image with normalized
+    histogram
     """
     # Step 1
-    # Load the image
-    raw_image = load_tiff_image(filename)
     # Equalize the histogram of the loaded image
-    equalized_lut = equalize_histogram(raw_image)
-    equalized_image = equalized_lut[raw_image]
+    equalized_lut = equalize_histogram(image)
+    equalized_image = equalized_lut[image]
     # Inverse the LUT (blacks become whites) in order to highlight noise
     inverse_lut = 255 - np.arange(0, 256, 1)
     inversed_image = inverse_lut[equalized_image]
@@ -65,11 +66,11 @@ def extract_features_centers(filename: str) -> List[Tuple[float, float]]:
         horizontal_lines, vertical_lines
     )
 
-    return centers_coordinates
+    return centers_coordinates, equalized_image
 
 
 def get_intersection_points(
-    horizontal_lines: List[float], vertical_lines: List[float]
+        horizontal_lines: List[float], vertical_lines: List[float]
 ) -> List[Tuple[float, float]]:
     """Find coordinates of intersection between horizontal and vertical lines.
 
@@ -96,7 +97,7 @@ def get_intersection_points(
 
 
 def interpolate_lines(
-    noise_areas_df: pd.DataFrame, x_name: str, y_name: str
+        noise_areas_df: pd.DataFrame, x_name: str, y_name: str
 ) -> List[Tuple[float, float]]:
     """Interpolate a line passing through each group of points.
 
@@ -153,7 +154,7 @@ def get_point_groups(single_dim_coordinates: np.array) -> List[int]:
             for j in range(n_points):
                 # Check whether the point is close from the current point
                 if (distances[i][j] < distance_threshold) and (
-                    j not in visited
+                        j not in visited
                 ):
                     # Mark the point as visited and add it in the current group
                     visited.append(j)
@@ -245,7 +246,7 @@ def equalize_histogram(image: np.array) -> np.array:
     """
     # Compute the histogram
     histogram = cv2.calcHist([image], [0], None, [256], [0, 256])
-    # Compute the cummulative histogram
+    # Compute the cumulative histogram
     cumulative_histogram = histogram.cumsum()
 
     # Mask zero pixels in order to not take them into account when
@@ -253,12 +254,9 @@ def equalize_histogram(image: np.array) -> np.array:
     masked_cumulative_histogram = np.ma.masked_equal(cumulative_histogram, 0)
     # Equalise the histogram
     masked_cumulative_histogram = (
-        (masked_cumulative_histogram - masked_cumulative_histogram.min())
-        * 255
-        / (
-            masked_cumulative_histogram.max()
-            - masked_cumulative_histogram.min()
-        )
+            (masked_cumulative_histogram - masked_cumulative_histogram.min())
+            * 255 / (masked_cumulative_histogram.max() -
+                     masked_cumulative_histogram.min())
     )
 
     equalised_histogram = np.ma.filled(masked_cumulative_histogram, 0).astype(
@@ -266,3 +264,154 @@ def equalize_histogram(image: np.array) -> np.array:
     )
 
     return equalised_histogram
+
+
+def save_centers(filename: str, cropped: np.array, center_n: int) -> None:
+    """
+    Given a filename and a crop made around the nth center of that image
+    save the crop under the corresponding directory
+    :param filename: path to the .tiff file (red channel is recommended)
+    :param cropped: a part of the tiff file
+    :param center_n: number of the center the crop was made around
+    """
+    directory = os.path.dirname(filename)
+    base = os.path.basename(filename)
+    name, _ = os.path.splitext(base)
+    height, width = cropped.shape[0], cropped.shape[1]
+    crop_dir = name + f"_cropped_{height}x{width}"
+    crop_dir = os.path.join(directory, crop_dir)
+    if not os.path.exists(crop_dir):
+        os.mkdir(crop_dir)
+        print(f"Created {crop_dir} to save the cropped images for {filename}")
+    else:
+        print(f"Directory {crop_dir} already exists")
+    path = os.path.join(crop_dir, f"center_{i}")
+    np.save(path, cropped)
+    print(f"Finding centers of {filename}")
+
+
+def crop_centers(image: np.array, height: int, width: int) -> None:
+    """
+    Given an image, extract the noise centers of that image,
+    and around each center, crop a sub-image with size height*width.
+    :param image : the image, as a numpy array
+    :param height: height of the crop around each center
+    :param width: width of the crop around each center
+    :return: cropped_images : list of cropped images
+    """
+    centers_coordinates, img = extract_features_centers(image)
+    print(f"Found {len(centers_coordinates)} centers for image {img}")
+    contour_mask,cell_contour = find_contour_image(image)
+    h, w = img.shape
+    cropped_images = []
+    for i, (column, row) in enumerate(centers_coordinates):
+        column = int(round(column))
+        row = int(round(row))
+        if 0 <= row < h and 0 <= column < w:
+            left = max(0, column - width // 2)
+            right = min(w, column + width // 2)
+            top = max(0, row - height // 2)
+            bottom = min(h, row + height // 2)
+            cropped = image[top: bottom, left:right]
+            contour_mask_cropped = contour_mask[top: bottom, left:right]
+            cropped_cells = cv2.bitwise_and(cropped,cropped, mask = contour_mask_cropped)
+            cropped_images.append(cropped_cells)
+        else:
+            print(
+                f"Center {i} is out of bounds for image of size {h}x{w} "
+                f"with coordinates {column, row}")
+    #print(f"Saved {len(cropped_images)} cropped images")
+    return cropped_images
+
+
+def contract_edge(
+        cell_contour: np.array, image: np.array,
+        erosion_kernel: np.array = np.ones((9, 9), np.uint8),
+        iterations: int = 50
+) -> np.array:
+    """
+    Given an image and the contour of the cell, return the contracted
+    contour.
+    :param cell_contour: contour before erosion
+    :param image: image on which we make pre-processing
+    :param erosion_kernel: kernel which should be used for erosion
+    :param iterations: number of iterations in the erosion process
+    :return: cell_contour_eroded: contracted contour
+    """
+    cimg = np.zeros_like(image)
+    cimg = cv2.fillPoly(cimg, pts=[cell_contour], color=(255, 255, 255))
+    cimg = cv2.erode(cimg, erosion_kernel, iterations=iterations)
+    cell_contour_eroded, _ = cv2.findContours(
+        cimg, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE
+    )
+    return cell_contour_eroded
+
+
+def find_contour_image(
+        image: np.array,
+        erosion_kernel: np.array = np.ones((3, 3), np.uint8),
+        dilatation_kernel: np.array = np.ones((30, 30), np.uint8),
+        n_erosions: int = 2,
+        n_dilatations: int = 5
+) -> List[np.array,np.array]:
+    """
+    Given an image return the contour of the cells membrane
+    :param image: image on which we make pre-processing
+    :param erosion_kernel: kernel which should be used for erosion
+    :param dilatation_kernel: kernel which should be used for dilatation
+    :param n_erosionss: number of iterations in the erosion process
+    :param n_dilatations: number of iterations in the dilatation process
+    :return: cell_contour: contour of the cells membrane
+    :return: contour_mask: mask corresponding to the contour
+    """
+    
+    emphasized_image = emphasize_noise_areas(
+    image,
+    erosion_kernel=erosion_kernel,
+    dilatation_kernel=dilatation_kernel,
+    n_erosions=n_erosions,
+    n_dilations=n_dilatations,
+    )
+    contours, _ = cv2.findContours(
+    emphasized_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    cell_contour = max(contours, key=cv2.contourArea)
+    
+    contour_mask = np.zeros_like(emphasized_image)
+    contour_mask = cv2.fillPoly(
+    contour_mask, pts =[cell_contour], color=(255,255,255)
+    )
+    return (contour_mask,cell_contour)
+
+
+def preprocess_data(images_filename: str,
+                    storage_preprocessed_images: str,
+                    height: int, 
+                    width: int
+    ) -> None:
+    """
+    Given a directory with images to preprocess and a folder to store
+    the pre-processed data, create a folder with the pre-processed images
+    :param filename: filename containing all tiff images
+    :param storage_preprocessed_image: place where we want to store
+    preprocessed images (in a file named images_pre_processed
+    :param height: height which is used to crop images
+    :param width: width which is used to crop images
+    """
+    (_, _, images) = walk(images_filename).next()
+    final_directory = os.path.join(storage_preprocessed_images, 
+                                   'images_pre_processed')
+    if not os.path.exists(final_directory):
+        os.makedirs(final_directory)
+        for image in images:
+            target_path = os.path.join(final_directory,image)
+            os.makedirs(target_path)
+            cropped_images = crop_centers(
+                cv2.imread(os.path.join(images_filename,image)),
+                height,width)
+            for i in range len(cropped_images):
+                cv2.imwrite(
+                    os.path.join(target_path, filename+"crop_{}".format(i))
+                )
+             
+            
+
